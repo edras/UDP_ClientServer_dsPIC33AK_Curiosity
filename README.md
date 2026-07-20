@@ -10,6 +10,18 @@
 
 ---
 
+![Setup Photo](assets/curiosity.png "Two dsPIC33AK Curiosity boards connected P2P via 10BASE-T1S")
+
+### Development Tools
+
+| Board / Module | Description | Link |
+|----------------|-------------|------|
+| dsPIC33AK512MPS506 Curiosity | Main development board (x2) | [Microchip DevTools](https://www.microchip.com/en-us/development-tool/ev17p63a) |
+| Curiosity Nano Base for Click | Base platform for Click modules | [Microchip DevTools](https://www.microchip.com/en-us/development-tool/AC164162) |
+| MIKROE-5543 | 10BASE-T1S Click board (LAN8651) | [MikroE](https://www.mikroe.com/eth-t1s-click) |
+
+---
+
 ## Table of Contents
 
 - [About](#about)
