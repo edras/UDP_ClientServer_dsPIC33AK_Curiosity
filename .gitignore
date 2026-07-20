@@ -1,0 +1,69 @@
+# Build output and intermediate files
+/out/
+/dist/
+/build/
+/_build/
+/*.elf
+/*.hex
+/*.map
+/*.lst
+/*.d
+
+# MCC Generated files (if re-creatable, otherwise keep if hand-edited)
+/mcc/mcc_generated_files/
+/My_MCC_Config/mcc/mcc_generated_files/
+
+# IDE and editor folders
+.vscode/
+/.idea/
+*.swp
+*.swo
+*.bak
+
+# CMake-generated artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+.generated/
+/cmake/
+
+# User logs and artifacts
+*.log
+*.tmp
+
+# Auto-generated or backup files
+*~
+*.orig
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test/utility output (if any)
+*.gcda
+*.gcno
+*.gcov
+
+# Exclude everything except sources and essential config
+!src/
+!*.h
+!*.c
+!*.s
+!*.json
+!*.mc3
+!*.mc4
+
+Makefile*
+Package-*
+private/
+_build/
+!cmake/**/user.cmake
+
+.generated_files/
+build/
+dist/
+nbproject/
+cmake/**/.generated/*
+cmake/**/CMake*
+out/
