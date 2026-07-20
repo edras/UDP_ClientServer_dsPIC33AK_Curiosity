@@ -45,7 +45,7 @@ typedef enum {
 #define HEARTBEAT_ACK_BYTE      0xAC
 #define HEARTBEAT_ACK_SIZE      1
 
-/* Heartbeat statistics (accessible via X2Cscope) */
+/* Heartbeat statistics */
 typedef struct {
     uint32_t tx_count;       /* Heartbeats sent (server) or ACKs sent (client) */
     uint32_t rx_count;       /* ACKs received (server) or heartbeats received (client) */
@@ -80,7 +80,7 @@ void heartbeat_service(void);
 void heartbeat_set_paused(bool paused);
 
 /**
- * @brief Get pointer to heartbeat statistics (for X2Cscope visibility).
+ * @brief Get pointer to heartbeat statistics.
  */
 const heartbeat_stats_t* heartbeat_get_stats(void);
 

@@ -1,0 +1,160 @@
+<mxfile host="app.diagrams.net" modified="2026-07-20T00:00:00.000Z" agent="Claude" version="21.0.0">
+  <diagram name="System Block Diagram" id="system-block-diagram">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="&lt;b&gt;dsPIC33AK + 10BASE-T1S System Block Diagram&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;fontSize=16;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="400" y="10" width="500" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- SERVER BOARD -->
+        <mxCell id="srv_board" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#6c8ebf;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="520" height="580" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_label" value="&lt;b&gt;SERVER BOARD&lt;/b&gt;&lt;br&gt;(Button NOT pressed at reset)" style="text;html=1;align=center;fontSize=11;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="140" y="65" width="300" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Server MCU -->
+        <mxCell id="srv_mcu" value="&lt;b&gt;dsPIC33AK512MPS506&lt;/b&gt;&lt;br&gt;@ 200 MHz" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="110" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Server App blocks -->
+        <mxCell id="srv_main" value="main.c&lt;br&gt;Role: SERVER" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="180" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_hb" value="udp_heartbeat&lt;br&gt;TX: 1 byte LED&lt;br&gt;RX: 1 byte ACK" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="180" y="180" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_iperf" value="iperf client&lt;br&gt;1460 B packets" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="310" y="180" width="100" height="40" as="geometry" />
+        </mxCell>
+
+
+        <!-- Server lwIP -->
+        <mxCell id="srv_lwip" value="&lt;b&gt;lwIP Stack&lt;/b&gt; (UDP/TCP/IP)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="260" width="450" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Server TC6 -->
+        <mxCell id="srv_tc6" value="&lt;b&gt;TC6 SPI Protocol&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="60" y="315" width="450" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Server SPI -->
+        <mxCell id="srv_spi" value="SPI1 (DMA)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="180" y="365" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Server LAN8651 -->
+        <mxCell id="srv_lan" value="&lt;b&gt;LAN8651&lt;/b&gt;&lt;br&gt;10BASE-T1S MAC-PHY&lt;br&gt;PLCA Node ID = 1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="140" y="420" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Server peripherals -->
+        <mxCell id="srv_led" value="LED0&lt;br&gt;(blink 500ms)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="60" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_sw" value="SW0&lt;br&gt;(iperf/reset)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="180" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_uart" value="UART1&lt;br&gt;(RTT stats)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="300" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_tmr" value="TMR1&lt;br&gt;100MHz&lt;br&gt;10ns res" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="420" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- T1S BUS -->
+        <mxCell id="t1s_bus" value="&lt;b&gt;10BASE-T1S Single Pair&lt;/b&gt;&lt;br&gt;PLCA (2 nodes) | 10 Mbps" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;strokeWidth=3;" vertex="1" parent="1">
+          <mxGeometry x="580" y="430" width="220" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Connection Server to Bus -->
+        <mxCell id="conn_srv" value="" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="420" y="450" as="sourcePoint" />
+            <mxPoint x="580" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- CLIENT BOARD -->
+        <mxCell id="cli_board" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#82b366;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="60" width="520" height="580" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_label" value="&lt;b&gt;CLIENT BOARD&lt;/b&gt;&lt;br&gt;(Button held at reset)" style="text;html=1;align=center;fontSize=11;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="940" y="65" width="280" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Client MCU -->
+        <mxCell id="cli_mcu" value="&lt;b&gt;dsPIC33AK512MPS506&lt;/b&gt;&lt;br&gt;@ 200 MHz" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="880" y="110" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Client App blocks -->
+        <mxCell id="cli_main" value="main.c&lt;br&gt;Role: CLIENT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="840" y="180" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_hb" value="udp_heartbeat&lt;br&gt;RX: 1 byte LED&lt;br&gt;TX: 1 byte ACK" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="960" y="180" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_iperf" value="iperf receiver&lt;br&gt;(bandwidth stats)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="180" width="100" height="40" as="geometry" />
+        </mxCell>
+
+
+        <!-- Client lwIP -->
+        <mxCell id="cli_lwip" value="&lt;b&gt;lwIP Stack&lt;/b&gt; (UDP/TCP/IP)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="840" y="260" width="450" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Client TC6 -->
+        <mxCell id="cli_tc6" value="&lt;b&gt;TC6 SPI Protocol&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="840" y="315" width="450" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Client SPI -->
+        <mxCell id="cli_spi" value="SPI1 (DMA)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="960" y="365" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Client LAN8651 -->
+        <mxCell id="cli_lan" value="&lt;b&gt;LAN8651&lt;/b&gt;&lt;br&gt;10BASE-T1S MAC-PHY&lt;br&gt;PLCA Node ID = 0 (Coordinator)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="920" y="420" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Client peripherals -->
+        <mxCell id="cli_led" value="LED0&lt;br&gt;(mirrors srv)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="840" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_sw" value="SW0&lt;br&gt;(role select)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="960" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_uart" value="UART1&lt;br&gt;(RX stats)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="cli_tmr" value="TMR1&lt;br&gt;100MHz&lt;br&gt;10ns res" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="500" width="90" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Connection Client to Bus -->
+        <mxCell id="conn_cli" value="" style="endArrow=classic;startArrow=classic;html=1;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="800" y="450" as="sourcePoint" />
+            <mxPoint x="920" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Performance annotations -->
+        <mxCell id="perf_box" value="&lt;b&gt;Performance&lt;/b&gt;&lt;br&gt;RTT: 507 us&lt;br&gt;Throughput: 9.47 Mbps&lt;br&gt;Link utilization: 95%" style="text;html=1;align=left;verticalAlign=top;fillColor=#f8cecc;strokeColor=#b85450;rounded=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="590" y="510" width="200" height="70" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

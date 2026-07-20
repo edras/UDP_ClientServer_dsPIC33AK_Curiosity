@@ -62,11 +62,9 @@ typedef enum {
     RESET_COUNTDOWN         /* Button released, counting down to reset */
 } reset_state_t;
 
-/* X2Cscope variables */
-uint8_t my_counter = 0;
 SYSTICK_TIMEOUT led_toggle;
 
-/* Board role - accessible from X2Cscope */
+/* Board role and LED state */
 board_role_t board_role;
 uint8_t led_state = 0;
 
