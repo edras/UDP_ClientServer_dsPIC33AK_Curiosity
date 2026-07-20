@@ -106,6 +106,7 @@ void iperf_stop_application(void);
 bool iperf_get_running_state(void);
 void iperf_service(void);
 void iperf_set_packet_size(uint16_t packetLength);
+void iperf_set_remote_ip(const char* ip_str);
 
 #ifdef __cplusplus
 }

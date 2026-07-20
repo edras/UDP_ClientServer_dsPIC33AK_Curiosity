@@ -335,3 +335,10 @@ void iperf_set_packet_size(uint16_t packetLength)
     }
     printf("iperf packet size set to %d Bytes\r\n", iPayloadSize);
 }
+
+void iperf_set_remote_ip(const char* ip_str)
+{
+    if (!ipaddr_aton(ip_str, &remoteIP)) {
+        printf("iperf: Invalid remote IP: %s\r\n", ip_str);
+    }
+}

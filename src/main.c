@@ -112,6 +112,13 @@ int main(void)
 
     T1S_init();
 
+    /* Point iperf at peer board (not PC) for board-to-board throughput test */
+    if (board_role == BOARD_ROLE_SERVER) {
+        iperf_set_remote_ip("192.168.0.100");
+    } else {
+        iperf_set_remote_ip("192.168.0.101");
+    }
+
     /* Initialize heartbeat module.
      * Server sends to client IP, client sends ACK back to server IP. */
     if (board_role == BOARD_ROLE_SERVER) {
@@ -138,19 +145,21 @@ int main(void)
             heartbeat_service();
         }
 
-        /* Short press: toggle iperf */
-        if (APP_Button_WasPressed(APP_BTN_SW1))
+        /* Short press: toggle iperf (server only) */
+        if (APP_Button_WasPressed(APP_BTN_SW1) && board_role == BOARD_ROLE_SERVER)
         {
             if (iperf_running)
             {
                 iperf_stop_application();
-                printf("iperf test stopped\r\n");
+                heartbeat_set_paused(false);
+                printf("iperf stopped - heartbeat resumed\r\n");
                 iperf_running = false;
             }
             else
             {
+                heartbeat_set_paused(true);
                 iperf_start_application();
-                printf("iperf test started\r\n");
+                printf("iperf started - heartbeat paused\r\n");
                 iperf_running = true;
             }
         }
