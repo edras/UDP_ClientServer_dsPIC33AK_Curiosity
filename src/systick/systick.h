@@ -37,9 +37,12 @@
 /*                         PUBLIC FUNCTIONS                             */
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-// The systick timer runs as a sub-millisecond timer.
-#define SYSTICK_TIMER_SCALER_MS 100ULL // Divide by this value to get the millisecond tick count
-#define SYSTICK_TIMER_SCALER_US 10ULL  // Multiply this value to get the microsecond tick count
+// Free-running timer: 100MHz clock = 10ns per tick, full 32-bit counter
+// Wraps at 2^32 ticks = 4,294,967,296 * 10ns = ~42.95 seconds
+#define SYSTICK_TICK_NS          10UL        // Nanoseconds per tick
+#define SYSTICK_TIMER_SCALER_MS  100000UL    // Divide ticks by this to get milliseconds (10ns * 100000 = 1ms)
+#define SYSTICK_TIMER_SCALER_US  100UL       // Divide ticks by this to get microseconds (10ns * 100 = 1us)
+#define SYSTICK_PERIOD_MS        42949UL     // Timer wraps every ~42.95 seconds
 
 typedef struct
 { 
@@ -47,14 +50,14 @@ typedef struct
     uint32_t count; 
 } SYSTICK_TIMEOUT;
 
-/// @brief Initialie the Systick subsystem.
+/// @brief Initialize the Systick subsystem.
 void SysTick_Initialize(void);
 
-/// @brief Get the system tick count in milliseconds.
+/// @brief Get the system tick count in milliseconds (monotonically increasing).
 /// @return uint32_t count in milliseconds.
 uint32_t SysTick_GetTickMs(void);
 
-/// @brief Get the system tick count in microseconds.
+/// @brief Get the system tick count in microseconds (monotonically increasing).
 /// @return uint64_t count in microseconds.
 uint64_t SysTick_GetTickUs(void);
 

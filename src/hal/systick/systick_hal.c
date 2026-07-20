@@ -5,9 +5,16 @@
 
 void SysTick_hal_Initialize(void (*CallbackHandler)(void))
 {
-    // Initialize the hardware timer for systick
-    Timer1.TimeoutCallbackRegister(CallbackHandler);
+    /* Register callback only if provided (not needed for free-running mode) */
+    if (CallbackHandler != NULL) {
+        Timer1.TimeoutCallbackRegister(CallbackHandler);
+    }
     Timer1.Start();
+}
+
+uint32_t SysTick_hal_GetTick(void)
+{
+    return Timer1.CounterGet();
 }
 
 void SysTick_DelayMs(uint32_t milliseconds)

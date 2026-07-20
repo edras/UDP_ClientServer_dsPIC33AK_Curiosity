@@ -31,14 +31,18 @@
 #define T1S_BOARD_INSTANCE          (1)
 #endif
 #define T1S_PLCA_ENABLE             (true)
-#define T1S_PLCA_NODE_ID            (T1S_BOARD_INSTANCE + 1)
-#define T1S_PLCA_NODE_COUNT         (8)
+#define T1S_PLCA_NODE_ID_DEFAULT    (T1S_BOARD_INSTANCE + 1)
+#define T1S_PLCA_NODE_COUNT         (2)
 #define T1S_PLCA_BURST_COUNT        (0)
 #define T1S_PLCA_BURST_TIMER        (0x80)
 #define MAC_PROMISCUOUS_MODE        (false)
 #define MAC_TX_CUT_THROUGH          (false)
 #define MAC_RX_CUT_THROUGH          (false)
 #define DELAY_BEACON_CHECK          (1000)
+
+/* Runtime-configurable parameters (set via T1S_configure before T1S_init) */
+static uint8_t m_configured_nodeId = 0xFF;      /* 0xFF = not configured, use default */
+static uint8_t m_configured_ip_octet = 0xFF;    /* 0xFF = not configured, use default */
 
 #define ESC_CLEAR_TERMINAL          "\033[2J"
 #define ESC_CURSOR_X1Y1             "\033[1;1H"
@@ -64,7 +68,7 @@ typedef struct {
 
 
 static MainLocal_t m;
-static const uint8_t m_ip[] = {192, 168, 0, (100 + T1S_BOARD_INSTANCE)};
+static uint8_t m_ip[] = {192, 168, 0, (100 + T1S_BOARD_INSTANCE)};
 char t1s_msg[100];
 
 /**
@@ -171,12 +175,24 @@ void T1S_OnIperfResult(void *arg, enum lwiperf_report_type report_type,
     T1S_print_message(t1s_msg);
 }
 
+void T1S_configure(uint8_t nodeId, uint8_t ip_last_octet)
+{
+    m_configured_nodeId = nodeId;
+    m_configured_ip_octet = ip_last_octet;
+}
+
 bool T1S_init(void)
 {
     if(!T1S_AVAILABLE) return false;
-     
+
+    /* Apply runtime configuration if set, otherwise use defaults */
+    uint8_t nodeId = (m_configured_nodeId != 0xFF) ? m_configured_nodeId : T1S_PLCA_NODE_ID_DEFAULT;
+    if (m_configured_ip_octet != 0xFF) {
+        m_ip[3] = m_configured_ip_octet;
+    }
+
     memset(&m, 0, sizeof(m));
-    m.idxLwIp = TC6LwIP_Init(m_ip, T1S_PLCA_ENABLE, T1S_PLCA_NODE_ID, T1S_PLCA_NODE_COUNT,
+    m.idxLwIp = TC6LwIP_Init(m_ip, T1S_PLCA_ENABLE, nodeId, T1S_PLCA_NODE_COUNT,
             T1S_PLCA_BURST_COUNT, T1S_PLCA_BURST_TIMER, MAC_PROMISCUOUS_MODE,
             MAC_TX_CUT_THROUGH, MAC_RX_CUT_THROUGH);
 
@@ -185,7 +201,8 @@ bool T1S_init(void)
         return false;
     }
 
-    T1S_print_message("T1S Firmware " FIRMWARE_VERSION " (" __DATE__ " " __TIME__ ") ===\r\n");
+    sprintf(t1s_msg, "T1S Firmware " FIRMWARE_VERSION " NodeID=%d IP=192.168.0.%d\r\n", nodeId, m_ip[3]);
+    T1S_print_message(t1s_msg);
 
     /* iperf */
     iperf_init();

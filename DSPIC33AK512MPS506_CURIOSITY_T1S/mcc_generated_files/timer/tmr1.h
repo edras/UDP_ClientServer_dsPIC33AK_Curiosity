@@ -67,6 +67,11 @@ extern const struct TIMER_INTERFACE Timer1;
 #define Timer1_Deinitialize TMR1_Deinitialize
 /**
  * @ingroup  timerdriver
+ * @brief    This macro defines the Custom Name for \ref TMR1_Tasks API
+ */
+#define Timer1_Tasks TMR1_Tasks
+/**
+ * @ingroup  timerdriver
  * @brief    This macro defines the Custom Name for \ref TMR1_Start API
  */
 #define Timer1_Start TMR1_Start
@@ -121,6 +126,13 @@ void TMR1_Initialize ( void );
  */
 void TMR1_Deinitialize(void);
 
+/**
+ * @ingroup  timerdriver
+ * @brief    This function is used to implement the tasks for polled implementations
+ * @pre      \ref TMR1_Initialize must be called and Timer must be ON
+ * @return   none
+ */
+void TMR1_Tasks( void );
 
 /**
  * @ingroup  timerdriver

@@ -53,7 +53,7 @@ const struct TIMER_INTERFACE Timer1 = {
     .CounterGet            = &TMR1_CounterGet,
     .InterruptPrioritySet  = &TMR1_InterruptPrioritySet,
     .TimeoutCallbackRegister = &TMR1_TimeoutCallbackRegister,
-    .Tasks          = NULL
+    .Tasks          = &TMR1_Tasks
 };
 
 // Section: TMR1 Module APIs
@@ -64,25 +64,17 @@ void TMR1_Initialize (void)
     T1CON = 0x0UL;
     //TMR 0x0; 
     TMR1 = 0x0UL;
-    //Period 0.01 ms; Frequency 100,000,000 Hz; PR 999; 
-    PR1 = 0x3E7UL;
+    //Period 42,949 ms; Frequency 100,000,000 Hz; PR 4294899999; 
+    PR1 = 0xFFFEF91FUL;
     
     TMR1_TimeoutCallbackRegister(&TMR1_TimeoutCallback);
 
-    //Clear interrupt flag
-    IFS1bits.T1IF = 0;
-    //Enable the interrupt
-    IEC1bits.T1IE = 1;
-    
     TMR1_Start();
 }
 
 void TMR1_Deinitialize (void)
 {
     TMR1_Stop();
-    
-    //Disable the interrupt
-    IEC1bits.T1IE = 0;
     
     T1CON = 0x0UL;
     TMR1 = 0x0UL;
@@ -124,18 +116,13 @@ void __attribute__ ((weak)) TMR1_TimeoutCallback( void )
 
 } 
 
-/* cppcheck-suppress misra-c2012-8.4
-*
-* (Rule 8.4) REQUIRED: A compatible declaration shall be visible when an object or 
-* function with external linkage is defined
-*
-* Reasoning: Interrupt declaration are provided by compiler and are available
-* outside the driver folder
-*/
-void __attribute__ ( ( interrupt ) ) _T1Interrupt(void)
+void TMR1_Tasks( void )    
 {
-    (*TMR1_TimeoutHandler)();
-    IFS1bits.T1IF = 0;
+    if(IFS1bits.T1IF == 1)
+    {
+        (*TMR1_TimeoutHandler)();
+        IFS1bits.T1IF = 0;
+    }
 }
 
 /**

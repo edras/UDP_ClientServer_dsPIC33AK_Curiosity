@@ -37,7 +37,6 @@
 #include "../../dma/dma.h"
 #include "../dmt.h"
 #include "../../i2c_host/i2c1.h"
-#include "../../timer/sccp1.h"
 #include "../../spi_host/spi1.h"
 #include "../../timer/tmr1.h"
 #include "../../uart/uart1.h"
@@ -51,7 +50,6 @@ void SYSTEM_Initialize(void)
     DMA_Initialize();
     DMT_Initialize();
     I2C1_Initialize();
-    SCCP1_Timer_Initialize();
     SPI1_Initialize();
     TMR1_Initialize();
     UART1_Initialize();

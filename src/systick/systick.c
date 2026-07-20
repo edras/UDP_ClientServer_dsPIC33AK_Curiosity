@@ -28,88 +28,76 @@
 /* OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.                           */
 /*------------------------------------------------------------------------------------------------*/
 
-#include <string.h>
 #include "systick.h"
 #include "systick/systick_hal.h"
-
 
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 /*                      DEFINES AND LOCAL VARIABLES                     */
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 
-/// @brief Defines the Systick object.
-typedef struct
+static uint32_t last_raw = 0;
+static uint32_t ms_offset = 0;     /* Accumulated ms from past timer periods */
+
+/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+/*                      PRIVATE FUNCTIONS                               */
+/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+
+/**
+ * @brief Read raw timer tick and detect wrap-around.
+ *        Must be called at least once per 60s period to detect wraps.
+ * @return Current raw tick value (0 to ~3,000,000,000)
+ */
+static uint32_t read_tick_with_wrap_detect(void)
 {
-   volatile uint64_t tickCounter;
-} SYSTICK_OBJECT;
+    uint32_t raw;
 
-static SYSTICK_OBJECT systick;
+    ENTER_CRITICAL();
+    raw = SysTick_hal_GetTick();
+    if (raw < last_raw) {
+        /* Timer wrapped - accumulate one full period */
+        ms_offset += SYSTICK_PERIOD_MS;
+    }
+    last_raw = raw;
+    LEAVE_CRITICAL();
 
-/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
-/*                      PRIVATE FUNCTION PROTOTYPES                     */
-/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
-
-static void SystickCallback(void);
+    return raw;
+}
 
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 /*                         PUBLIC FUNCTIONS                             */
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+
 void SysTick_Initialize(void)
 {
-    (void)memset(&systick, 0, sizeof(SYSTICK_OBJECT));
-    SysTick_hal_Initialize(SystickCallback);
+    last_raw = 0;
+    ms_offset = 0;
+    SysTick_hal_Initialize(NULL);
 }
 
 uint32_t SysTick_GetTickMs(void)
 {
-    volatile uint32_t now;
-
-    ENTER_CRITICAL();
-    now = (uint32_t)(systick.tickCounter / SYSTICK_TIMER_SCALER_MS);
-    LEAVE_CRITICAL();
-
-    return now;
+    uint32_t raw = read_tick_with_wrap_detect();
+    return ms_offset + raw / SYSTICK_TIMER_SCALER_MS;
 }
 
 uint64_t SysTick_GetTickUs(void)
 {
-    volatile uint64_t now;
-
-    ENTER_CRITICAL();
-    now = (systick.tickCounter * SYSTICK_TIMER_SCALER_US);
-    LEAVE_CRITICAL();
-
-    return now;
+    uint32_t raw = read_tick_with_wrap_detect();
+    return (uint64_t)ms_offset * 1000UL + (uint64_t)(raw / SYSTICK_TIMER_SCALER_US);
 }
 
-void SysTick_StartTimeOut (SYSTICK_TIMEOUT* timeout, uint32_t delay_ms)
+void SysTick_StartTimeOut(SYSTICK_TIMEOUT* timeout, uint32_t delay_ms)
 {
     timeout->start = SysTick_GetTickMs();
     timeout->count = delay_ms;
 }
 
-void SysTick_ResetTimeOut (SYSTICK_TIMEOUT* timeout)
+void SysTick_ResetTimeOut(SYSTICK_TIMEOUT* timeout)
 {
     timeout->start = SysTick_GetTickMs();
 }
 
 bool SysTick_IsTimeoutReached(SYSTICK_TIMEOUT* timeout)
 {
-    bool valTimeout  = true;
-    if ((SysTick_GetTickMs() - timeout->start) < timeout->count)
-    {
-        valTimeout = false;
-    }
-
-    return valTimeout;
-
-}
-
-/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
-/*                  PRIVATE  FUNCTION IMPLEMENTATIONS                   */
-/*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
-
-static void SystickCallback(void)
-{
-    systick.tickCounter++;
+    return ((SysTick_GetTickMs() - timeout->start) >= timeout->count);
 }
