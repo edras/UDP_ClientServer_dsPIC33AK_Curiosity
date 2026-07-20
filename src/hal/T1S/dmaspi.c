@@ -141,7 +141,7 @@ void dmaSpiInit(dmaCompletionHandler handler)
 
     // Set PORT for auto slave select for SPI1
     PINS_PPSUnlock(); // unlock PPS
-    RPOR3bits.RP15R = _RPOUT_SS1;    //RA14->SPI1:CS
+    RPOR2bits.RP11R = _RPOUT_SS1;    //RA10->SPI1:CS
     PINS_PPSLock(); // lock PPS
 
     // In DMA mode, the SPI transmit/receive interrupts are not enabled.

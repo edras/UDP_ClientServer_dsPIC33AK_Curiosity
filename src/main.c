@@ -34,7 +34,8 @@
     Main application
 */
 
-uint16_t my_counter = 0;
+uint8_t my_counter = 0;
+SYSTICK_TIMEOUT led_toggle;
 
 void SCCP1_TimeoutCallback (void)
 { 
@@ -49,10 +50,12 @@ int main(void)
     SysTick_Initialize();
     APP_Buttons_Init();
 
-    printf("dsPIC33AK512MC510 + T1S\r\n");
+    printf("dsPIC33AK512MPS506 Curiosity + T1S\r\n");
 
     T1S_init();
     X2Cscope_Init();
+
+    SysTick_StartTimeOut(&led_toggle, 250);
 
     bool iperf_running = false;
 
@@ -77,6 +80,12 @@ int main(void)
                 printf("iperf test started\r\n");
                 iperf_running = true;
             }
+        }
+
+        if (SysTick_IsTimeoutReached(&led_toggle))
+        {
+            LED0_Toggle();
+            SysTick_ResetTimeOut(&led_toggle);
         }
     }
 }

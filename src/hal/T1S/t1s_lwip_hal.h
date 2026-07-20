@@ -42,7 +42,7 @@
 
 #include "hal.h"
 #include "mcc_generated_files/system/pins.h"
-#include "mcc_generated_files/i2c_host/i2c3.h"
+#include "mcc_generated_files/i2c_host/i2c1.h"
 #include "systick/systick.h"
 #include "dmaspi.h"
 
@@ -54,12 +54,12 @@
 #define T1S_BOARD_INSTANCE   0
 #define T1S_AVAILABLE        true
 
-#define T1S_RST_Clear        XPRO1_RST_SetLow
-#define T1S_RST_Set          XPRO1_RST_SetHigh
-#define T1S_CS_Clear         XPRO1_CS_SetLow
-#define T1S_CS_Set           XPRO1_CS_SetHigh
+#define T1S_RST_Clear        RST1_SetLow
+#define T1S_RST_Set          RST1_SetHigh
+#define T1S_CS_Clear         CS1_SetLow
+#define T1S_CS_Set           CS1_SetHigh
 
-#define T1S_INT_GetValue     XPRO1_INT_GetValue
+#define T1S_INT_GetValue     INT1_GetValue
 
 #define T1S_TERMINAL_Write(...)   printf(__VA_ARGS__)
 #define T1S_TERMINAL_Done(...)    true
@@ -75,9 +75,9 @@
 #define T1S_SPI_AVAILABLE    DMA_AVAILABLE
 
 // I2C Definitions
-#define T1S_I2C_WriteRead    I2C3_WriteRead
-#define T1S_I2C_IsBusy       I2C3_IsBusy
-#define T1S_I2C_ErrorGet     I2C3_ErrorGet
+#define T1S_I2C_WriteRead    I2C1_WriteRead
+#define T1S_I2C_IsBusy       I2C1_IsBusy
+#define T1S_I2C_ErrorGet     I2C1_ErrorGet
 
 #define T1S_reset(...)        __asm__ volatile ("reset")
 

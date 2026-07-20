@@ -6,7 +6,6 @@
 typedef enum {
     APP_BTN_NONE = 0,
     APP_BTN_SW1,
-    APP_BTN_SW2
 } APP_BTN_ID;
 
 void APP_Buttons_Init(void);

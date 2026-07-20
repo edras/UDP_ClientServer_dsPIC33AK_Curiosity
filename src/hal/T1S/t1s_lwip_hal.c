@@ -2,6 +2,6 @@
 
 void T1S_EIC_CB_Register(void (* callback)(void))
 {
-    XPRO1_INT_SetInterruptHandler(callback); 
+    INT1_SetInterruptHandler(callback); 
 }
 
