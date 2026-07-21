@@ -31,7 +31,7 @@
 #define T1S_BOARD_INSTANCE          (1)
 #endif
 #define T1S_PLCA_ENABLE             (true)
-#define T1S_PLCA_NODE_ID_DEFAULT    (T1S_BOARD_INSTANCE + 1)
+#define T1S_PLCA_NODE_ID_DEFAULT    (T1S_BOARD_INSTANCE)
 #define T1S_PLCA_NODE_COUNT         (2)
 #define T1S_PLCA_BURST_COUNT        (0)
 #define T1S_PLCA_BURST_TIMER        (0x80)

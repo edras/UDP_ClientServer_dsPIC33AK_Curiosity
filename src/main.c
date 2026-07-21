@@ -34,21 +34,21 @@
     Main application
     
     Role selection:
-      - Button NOT pressed at reset -> SERVER (PLCA nodeId=1, IP=192.168.0.101)
-        Server blinks LED0 at 250ms and sends heartbeat UDP to client.
-      - Button pressed at reset -> CLIENT (PLCA nodeId=0, IP=192.168.0.100)
+      - Button NOT pressed at reset -> SERVER (PLCA nodeId=0, IP=192.168.0.100)
+        Server blinks LED0 at 500ms and sends heartbeat UDP to client.
+      - Button pressed at reset -> CLIENT (PLCA nodeId=1, IP=192.168.0.101)
         Client receives heartbeat and mirrors LED0 state from server.
     
     Switch behavior in normal operation:
-      - Short press: toggle iperf UDP throughput test
+      - Short press (SERVER only): toggle iperf UDP throughput test
       - Long press (3s): software reset
 */
 
 /* Network configuration */
-#define SERVER_IP_LAST_OCTET    101
-#define CLIENT_IP_LAST_OCTET    100
-#define SERVER_PLCA_NODE_ID     1
-#define CLIENT_PLCA_NODE_ID     0
+#define SERVER_IP_LAST_OCTET    100
+#define CLIENT_IP_LAST_OCTET    101
+#define SERVER_PLCA_NODE_ID     0
+#define CLIENT_PLCA_NODE_ID     1
 
 /* Long press threshold for reset */
 #define LONG_PRESS_RESET_MS     3000
@@ -99,7 +99,7 @@ int main(void)
         printf("Role: CLIENT (nodeId=%d, IP=192.168.0.%d)\r\n", CLIENT_PLCA_NODE_ID, CLIENT_IP_LAST_OCTET);
         printf("  LED mirrors server heartbeat\r\n");
     }
-    printf("  Short press: toggle iperf | Long press (3s): reset\r\n");
+    printf("  Short press: toggle iperf (server only) | Long press (3s): reset\r\n");
 
     /* Configure T1S network based on role */
     if (board_role == BOARD_ROLE_SERVER) {
@@ -110,10 +110,8 @@ int main(void)
 
     T1S_init();
 
-    /* Point iperf at peer board (not PC) for board-to-board throughput test */
+    /* Point iperf at client board for board-to-board throughput test (server only) */
     if (board_role == BOARD_ROLE_SERVER) {
-        iperf_set_remote_ip("192.168.0.100");
-    } else {
         iperf_set_remote_ip("192.168.0.101");
     }
 
@@ -198,7 +196,7 @@ int main(void)
             break;
         }
 
-        /* Server: toggle LED and send heartbeat at 250ms interval
+        /* Server: toggle LED and send heartbeat at 500ms interval
          * Suspended during iperf and reset sequence
          * LED is active-low: SetLow = ON, SetHigh = OFF */
         if (board_role == BOARD_ROLE_SERVER && reset_state == RESET_IDLE && !iperf_running)

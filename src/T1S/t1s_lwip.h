@@ -23,7 +23,7 @@
 
 /**
  * @brief Configure T1S network parameters before calling T1S_init().
- * @param nodeId PLCA node ID (0=coordinator/client, 1=server)
+ * @param nodeId PLCA node ID (0=coordinator/server, 1=client)
  * @param ip_last_octet Last octet of IPv4 address (192.168.0.{octet})
  */
 void  T1S_configure(uint8_t nodeId, uint8_t ip_last_octet);
