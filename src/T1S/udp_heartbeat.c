@@ -44,11 +44,7 @@ static uint64_t m_send_timestamp_us = 0;
 /* Statistics - non-static so X2Cscope can access */
 heartbeat_stats_t hb_stats = {0};
 
-/* RTT reporting */
-#define RTT_REPORT_INTERVAL_MS  1000
-static uint32_t m_last_report_time = 0;
-static uint32_t m_rtt_sum_us = 0;
-static uint32_t m_rtt_count = 0;
+/* RTT reporting - prints each exchange individually */
 
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
 /*                      PRIVATE FUNCTIONS                               */
@@ -95,9 +91,16 @@ static void heartbeat_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p,
     else {
         /* Server received 1-byte ACK from client */
         if (p->tot_len >= HEARTBEAT_ACK_SIZE) {
+            /* Discard stale ACKs (timestamp cleared on mode switch) */
+            if (m_send_timestamp_us == 0) {
+                pbuf_free(p);
+                return;
+            }
+
             /* Calculate RTT using local microsecond timestamps */
             uint64_t now_us = T1S_GetTickCountUs();
             uint32_t rtt_us = (uint32_t)(now_us - m_send_timestamp_us);
+            m_send_timestamp_us = 0;  /* Consume - one ACK per send */
 
             hb_stats.last_rtt_us = rtt_us;
 
@@ -109,8 +112,11 @@ static void heartbeat_recv_cb(void *arg, struct udp_pcb *pcb, struct pbuf *p,
             }
 
             hb_stats.rx_count++;
-            m_rtt_sum_us += rtt_us;
-            m_rtt_count++;
+
+            /* Report immediately for this exchange */
+            printf("UDP: tx=%ld rx=%ld RTT=%ld us (avg=%ld us)\r\n",
+                   (long)hb_stats.tx_count, (long)hb_stats.rx_count,
+                   (long)rtt_us, (long)hb_stats.avg_rtt_us);
         }
     }
 
@@ -176,24 +182,9 @@ void heartbeat_send(uint8_t led_state)
 
 void heartbeat_service(void)
 {
-    if (m_pcb == NULL) return;
-
-    /* Server: periodic RTT report in microseconds */
-    if (m_role == BOARD_ROLE_SERVER) {
-        uint32_t now = (uint32_t)T1S_GetTickCountMs();
-        if ((now - m_last_report_time) >= RTT_REPORT_INTERVAL_MS) {
-            m_last_report_time = now;
-            if (m_rtt_count > 0) {
-                uint32_t avg_us = m_rtt_sum_us / m_rtt_count;
-                printf("HB: tx=%ld rx=%ld RTT=%ld us (avg=%ld us)\r\n",
-                       (long)hb_stats.tx_count, (long)hb_stats.rx_count,
-                       (long)hb_stats.last_rtt_us,
-                       (long)avg_us);
-                m_rtt_sum_us = 0;
-                m_rtt_count = 0;
-            }
-        }
-    }
+    /* Reporting is now done per-exchange in the rx callback.
+     * This function is kept for future periodic maintenance if needed. */
+    (void)0;
 }
 
 const heartbeat_stats_t* heartbeat_get_stats(void)
@@ -209,6 +200,11 @@ board_role_t heartbeat_get_role(void)
 void heartbeat_set_paused(bool paused)
 {
     m_paused = paused;
+}
+
+void heartbeat_reset_rtt(void)
+{
+    m_send_timestamp_us = 0;  /* Invalidate pending ACK */
 }
 
 /* *****************************************************************************

@@ -66,6 +66,17 @@ Microchip or any third party.
 #define PRINT_RATE_TIMEOUT      (1000u)
 #define PRINT_RATE_THRESHOLD    (5u)
 
+/* Raw RX callback registration (for custom EtherType interception) */
+#define RAW_RX_CB_MAX           (1u)
+
+typedef struct {
+    uint16_t etherType;
+    TC6LwIP_RawRxCallback_t callback;
+} RawRxEntry_t;
+
+static RawRxEntry_t m_rawRxCallbacks[RAW_RX_CB_MAX];
+static uint8_t m_rawRxCount = 0;
+
 #ifdef DEBUG
 #define ASSERT(x)               __conditional_software_breakpoint(x)
 #else
@@ -335,6 +346,29 @@ bool TC6LwIP_SetPlca(int8_t idx, bool plcaEnable, uint8_t nodeId, uint8_t nodeCo
     }
 
     return success;
+}
+
+TC6_t *TC6LwIP_GetTC6(int8_t idx)
+{
+    if (idx < TC6_MAX_INSTANCES)
+    {
+        TC6LwIP_t *lw = &mlw[idx];
+        if (LWIP_TC6_MAGIC == lw->magic)
+        {
+            return lw->tc.tc6;
+        }
+    }
+    return NULL;
+}
+
+void TC6LwIP_RegisterRawRxCallback(uint16_t etherType, TC6LwIP_RawRxCallback_t callback)
+{
+    if (m_rawRxCount < RAW_RX_CB_MAX)
+    {
+        m_rawRxCallbacks[m_rawRxCount].etherType = etherType;
+        m_rawRxCallbacks[m_rawRxCount].callback = callback;
+        m_rawRxCount++;
+    }
 }
 
 /*>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
@@ -617,6 +651,7 @@ void TC6_CB_OnRxEthernetPacket(TC6_t *pInst, bool success, uint16_t len, uint64_
         {
             uint16_t ethType;
             struct eth_hdr *ethhdr;
+            bool consumed = false;
 
             TC6_ASSERT(lw->tc.pbuf);
             TC6_ASSERT(lw->tc.pbuf->ref != 0);
@@ -627,7 +662,22 @@ void TC6_CB_OnRxEthernetPacket(TC6_t *pInst, bool success, uint16_t len, uint64_
             ethhdr = lw->tc.pbuf->payload;
             ethType = htons(ethhdr->type);
 
-            if (true == FilterRxEthernetPacket(ethType))
+            /* Check registered raw RX callbacks first (bypass lwIP for custom EtherTypes) */
+            {
+                uint8_t cbIdx;
+                for (cbIdx = 0; cbIdx < m_rawRxCount; cbIdx++)
+                {
+                    if (m_rawRxCallbacks[cbIdx].etherType == ethType &&
+                        m_rawRxCallbacks[cbIdx].callback != NULL)
+                    {
+                        m_rawRxCallbacks[cbIdx].callback((const uint8_t *)lw->tc.pbuf->payload, len);
+                        consumed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!consumed && (true == FilterRxEthernetPacket(ethType)))
             {
                 /* Integrator decided that TCP/IP stack shall consume the received packet */
                 err_t lwresult = lw->ip.netint.input(lw->tc.pbuf, &lw->ip.netint);

@@ -121,6 +121,24 @@ void TC6LwIP_GetMac(int8_t idx, uint8_t *mac[6]);
  */
 struct netif *TC6LwIP_GetNetIf(int8_t idx);
 
+/** \brief Get the TC6 instance pointer for direct raw frame operations.
+ *  \param idx - The instance number as returned from the TC6LwIP_Init() function.
+ *  \return TC6 instance pointer, or NULL if idx is invalid.
+ */
+TC6_t *TC6LwIP_GetTC6(int8_t idx);
+
+/** \brief Raw Ethernet RX callback type for custom EtherType handling.
+ *  \param pFrame - Pointer to the complete Ethernet frame (starting at dst MAC).
+ *  \param len - Total frame length.
+ */
+typedef void (*TC6LwIP_RawRxCallback_t)(const uint8_t *pFrame, uint16_t len);
+
+/** \brief Register a callback for receiving raw Ethernet frames with a custom EtherType.
+ *  \param etherType - The EtherType to intercept (host byte order).
+ *  \param callback - Function to call when a frame with this EtherType is received.
+ */
+void TC6LwIP_RegisterRawRxCallback(uint16_t etherType, TC6LwIP_RawRxCallback_t callback);
+
 /** \brief Sets the PLCA Node ID and the PLCA Node Count and can enable/disable PLCA.
  *  \param idx - The instance number as returned from the TC6LwIP_Init() function.
  *  \param plcaEnable - true, if PLCA shall be enabled. false, if CSMA/CD mode shall be used.

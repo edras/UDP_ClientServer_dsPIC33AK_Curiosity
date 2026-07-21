@@ -24,8 +24,10 @@
 #include "mcc_generated_files/system/pins.h"
 #include "systick/systick.h"
 #include "T1S/t1s_lwip.h"
+#include "T1S/tc6-lwip.h"
 #include "T1S/udp_perf_client.h"
 #include "T1S/udp_heartbeat.h"
+#include "T1S/eth_heartbeat.h"
 #include "app.h"
 
 #include <stdio.h>
@@ -55,6 +57,14 @@
 /* Delay after button release before executing reset */
 #define RESET_DELAY_MS          1000
 
+/* Heartbeat mode switching: alternate between UDP and raw Ethernet */
+#define HB_EXCHANGES_PER_MODE   10  /* Switch mode every 10 exchanges */
+
+typedef enum {
+    HB_MODE_UDP = 0,        /* Using lwIP UDP heartbeat */
+    HB_MODE_RAW_ETH         /* Using raw Ethernet heartbeat (lower RTT) */
+} heartbeat_mode_t;
+
 /* Reset state machine */
 typedef enum {
     RESET_IDLE = 0,         /* Normal operation */
@@ -71,6 +81,10 @@ uint8_t led_state = 0;
 /* Reset state */
 static reset_state_t reset_state = RESET_IDLE;
 static uint32_t reset_release_time = 0;
+
+/* Heartbeat mode switching state (server tracks exchanges, client is reactive) */
+static heartbeat_mode_t hb_mode = HB_MODE_UDP;
+static uint32_t hb_exchange_count = 0;
 
 int main(void)
 {
@@ -115,13 +129,19 @@ int main(void)
         iperf_set_remote_ip("192.168.0.101");
     }
 
-    /* Initialize heartbeat module.
-     * Server sends to client IP, client sends ACK back to server IP. */
+    /* Initialize heartbeat modules.
+     * UDP heartbeat: Server sends to client IP, client sends ACK back to server IP.
+     * Raw ETH heartbeat: Bypasses lwIP entirely for minimum RTT. */
     if (board_role == BOARD_ROLE_SERVER) {
         heartbeat_init(BOARD_ROLE_SERVER, CLIENT_IP_LAST_OCTET);
+        eth_heartbeat_init(BOARD_ROLE_SERVER);
     } else {
         heartbeat_init(BOARD_ROLE_CLIENT, SERVER_IP_LAST_OCTET);
+        eth_heartbeat_init(BOARD_ROLE_CLIENT);
     }
+
+    /* Register raw Ethernet RX callback for our custom EtherType */
+    TC6LwIP_RegisterRawRxCallback(ETH_HB_ETHERTYPE, eth_heartbeat_rx_handler);
 
     /* Server blinks LED at 500ms; client LED controlled by heartbeat reception */
     if (board_role == BOARD_ROLE_SERVER) {
@@ -136,9 +156,11 @@ int main(void)
         APP_Buttons_Task();
 
         /* Heartbeat service (handles RX processing and RTT reporting)
-         * Disabled during iperf to not interfere with throughput measurement */
+         * Disabled during iperf to not interfere with throughput measurement.
+         * Both UDP and raw ETH modules are serviced (client is reactive to both). */
         if (!iperf_running) {
             heartbeat_service();
+            eth_heartbeat_service();
         }
 
         /* Short press: toggle iperf (server only) */
@@ -148,12 +170,14 @@ int main(void)
             {
                 iperf_stop_application();
                 heartbeat_set_paused(false);
+                eth_heartbeat_set_paused(false);
                 printf("iperf stopped - heartbeat resumed\r\n");
                 iperf_running = false;
             }
             else
             {
                 heartbeat_set_paused(true);
+                eth_heartbeat_set_paused(true);
                 iperf_start_application();
                 printf("iperf started - heartbeat paused\r\n");
                 iperf_running = true;
@@ -172,6 +196,7 @@ int main(void)
             {
                 reset_state = RESET_WAITING_RELEASE;
                 heartbeat_set_paused(true);
+                eth_heartbeat_set_paused(true);
                 LED0_SetLow();  /* LED ON (active-low) */
                 led_state = 1;
                 printf("Reset armed - release button to reset\r\n");
@@ -196,8 +221,9 @@ int main(void)
             break;
         }
 
-        /* Server: toggle LED and send heartbeat at 500ms interval
-         * Suspended during iperf and reset sequence
+        /* Server: toggle LED and send heartbeat at 500ms interval.
+         * Alternates between UDP and raw Ethernet every HB_EXCHANGES_PER_MODE exchanges.
+         * Suspended during iperf and reset sequence.
          * LED is active-low: SetLow = ON, SetHigh = OFF */
         if (board_role == BOARD_ROLE_SERVER && reset_state == RESET_IDLE && !iperf_running)
         {
@@ -209,11 +235,35 @@ int main(void)
                 } else {
                     LED0_SetHigh();  /* OFF */
                 }
-                heartbeat_send(led_state);
+
+                /* Send via current mode */
+                if (hb_mode == HB_MODE_UDP) {
+                    heartbeat_send(led_state);
+                } else {
+                    eth_heartbeat_send(led_state);
+                }
+
+                /* Count exchange and switch mode after threshold */
+                hb_exchange_count++;
+                if (hb_exchange_count >= HB_EXCHANGES_PER_MODE) {
+                    hb_exchange_count = 0;
+                    /* Reset RTT accumulators to discard transitional measurements */
+                    heartbeat_reset_rtt();
+                    eth_heartbeat_reset_rtt();
+                    if (hb_mode == HB_MODE_UDP) {
+                        hb_mode = HB_MODE_RAW_ETH;
+                        printf(">> Switching to RAW ETH heartbeat\r\n");
+                    } else {
+                        hb_mode = HB_MODE_UDP;
+                        printf(">> Switching to UDP heartbeat\r\n");
+                    }
+                }
+
                 SysTick_ResetTimeOut(&led_toggle);
             }
         }
-        /* Client: LED is controlled by heartbeat_recv_cb in udp_heartbeat.c
+        /* Client: LED is controlled by heartbeat_recv_cb (UDP) or eth_heartbeat_rx_handler (raw ETH).
+         * Client is fully reactive - responds in the same protocol it receives.
          * (only while reset_state == RESET_IDLE; during reset sequence LED is solid HIGH) */
     }
 }

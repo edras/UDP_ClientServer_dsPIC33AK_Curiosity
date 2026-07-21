@@ -4,9 +4,9 @@
 
 **Two-board LED synchronization and throughput testing over 10BASE-T1S Single Pair Ethernet**
 
-![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Version](https://img.shields.io/badge/version-2.0.0-green)
 ![Status](https://img.shields.io/badge/status-active-success)
-![Updated](https://img.shields.io/badge/updated-2026--07--20-informational)
+![Updated](https://img.shields.io/badge/updated-2026--07--21-informational)
 
 ---
 
@@ -43,7 +43,12 @@
 
 This project demonstrates real-time LED synchronization between two dsPIC33AK512MPS506 Curiosity boards connected via 10BASE-T1S (Single Pair Ethernet). A single firmware image runs on both boards - the role (server or client) is selected by holding the button during reset.
 
-The server board blinks its LED at 500ms intervals and sends a 1-byte UDP heartbeat to the client. The client mirrors the LED state and sends a 1-byte ACK back. The server measures Round-Trip Time (RTT) with 10ns resolution, demonstrating sub-millisecond latency on the T1S link.
+The server board blinks its LED at 500ms intervals and sends a heartbeat to the client using two alternating transport modes:
+
+1. **UDP Heartbeat** (lwIP stack): Standard UDP/IP packet via lwIP - demonstrates conventional networking
+2. **Raw Ethernet Heartbeat** (zero-copy): Custom EtherType 0x88B5 frame sent directly via TC6 - bypasses the entire lwIP IP/UDP stack for minimum latency
+
+The system alternates between modes every 10 exchanges, printing per-exchange RTT measurements to demonstrate the latency improvement of raw Ethernet over UDP on the same physical link.
 
 An iperf-style UDP throughput test is also included for bandwidth measurement between the two boards.
 
@@ -52,10 +57,12 @@ An iperf-style UDP throughput test is also included for bandwidth measurement be
 ## Features
 
 - **Single firmware** for both boards - role selected at boot via button
-- **1-byte UDP heartbeat** with sub-millisecond RTT measurement (~507 us)
+- **Dual-mode heartbeat** alternating between UDP and raw Ethernet every 10 exchanges
+- **Raw Ethernet heartbeat** achieving ~422 us RTT (bypasses lwIP entirely)
+- **UDP heartbeat** achieving ~478 us RTT (standard lwIP UDP/IP path)
 - **LED synchronization** over 10BASE-T1S using PLCA
+- **Per-exchange RTT reporting** with 10ns resolution
 - **UDP throughput test** (iperf) achieving ~9.5 Mbps board-to-board
-- **Free-running 32-bit timer** with 10ns resolution (no ISR overhead)
 - **Long-press reset** with visual feedback for role switching
 
 ---
@@ -67,7 +74,7 @@ An iperf-style UDP throughput test is also included for bandwidth measurement be
 | MCU | dsPIC33AK512MPS506 @ 200 MHz |
 | Board | Curiosity Development Board |
 | MAC-PHY | LAN8651 (10BASE-T1S with PLCA) |
-| Interface | SPI (MCU to MAC-PHY) |
+| Interface | SPI @ 20 MHz (MCU to MAC-PHY) |
 | LED | LED0 (active-low) |
 | Switch | SW0 (active-low, with debounce) |
 
@@ -86,17 +93,40 @@ An iperf-style UDP throughput test is also included for bandwidth measurement be
 
 ## Protocol Design
 
-### Heartbeat (UDP Port 5000)
+### Dual-Mode Heartbeat (alternates every 10 exchanges)
+
+The server controls the mode. The client is fully reactive -- it responds in whatever protocol it receives.
+
+#### Mode 1: UDP Heartbeat (Port 5000)
 
 ```
 SERVER                              CLIENT
   |                                    |
-  |--- [1 byte: LED state] ---------->|  (Heartbeat)
+  |--- [UDP: 1 byte LED state] ------>|  (IP + UDP + 1B payload)
   |                                    |  Client updates LED
-  |<-- [1 byte: 0xAC] ----------------|  (ACK)
+  |<-- [UDP: 1 byte 0xAC] -----------|  (IP + UDP + 1B ACK)
   |                                    |
   | RTT = time(ACK rx) - time(HB tx)  |
+  |       ~478 us @ 20 MHz SPI        |
+```
+
+#### Mode 2: Raw Ethernet Heartbeat (EtherType 0x88B5)
+
+```
+SERVER                              CLIENT
   |                                    |
+  |--- [ETH: 1 byte LED state] ------>|  (Eth header + 1B payload, no IP/UDP)
+  |                                    |  Client updates LED
+  |<-- [ETH: 1 byte 0xAC] -----------|  (Eth header + 1B ACK)
+  |                                    |
+  | RTT = time(ACK rx) - time(HB tx)  |
+  |       ~422 us @ 20 MHz SPI        |
+```
+
+#### Mode Switching
+
+```
+[10x UDP] --> switch --> [10x ETH] --> switch --> [10x UDP] --> ...
 ```
 
 ### iperf Throughput Test (UDP Port 5001)
@@ -115,65 +145,98 @@ SERVER                              CLIENT
 
 ## Timing Diagram
 
-```
-         SERVER                    T1S Wire                    CLIENT
-    ┌──────────────┐          ┌──────────────┐          ┌──────────────┐
-    │              │          │              │          │              │
-    │ Toggle LED   │          │              │          │              │
-    │ Record t0    │          │              │          │              │
-    │              │          │              │          │              │
-    │ SPI TX ──────┼──~80us──>│              │          │              │
-    │              │          │ PLCA wait ───┼──~30us──>│              │
-    │              │          │ Wire TX ─────┼───5us───>│              │
-    │              │          │              │          │ SPI RX       │
-    │              │          │              │   ~80us  │ lwIP process │
-    │              │          │              │          │ Update LED   │
-    │              │          │              │          │ Send ACK     │
-    │              │          │              │          │ SPI TX ──────┼──~80us──┐
-    │              │          │              │<─~30us───┼─ PLCA wait   │         │
-    │              │          │              │<──5us────┼─ Wire TX     │         │
-    │              │   ~80us  │              │          │              │         │
-    │ SPI RX <─────┼──────────┤              │          │              │         │
-    │ Record t1    │          │              │          │              │         │
-    │              │          │              │          │              │         │
-    │ RTT = t1-t0  │          │              │          │              │         │
-    │   ~507 us    │          │              │          │              │         │
-    └──────────────┘          └──────────────┘          └──────────────┘
+### UDP Heartbeat (~478 us RTT)
 
-    |<─────────────────── ~507 us RTT ────────────────────>|
+```
+     SERVER                    T1S Wire                    CLIENT
+┌──────────────┐          ┌──────────────┐          ┌──────────────┐
+│ Toggle LED   │          │              │          │              │
+│ Record t0    │          │              │          │              │
+│              │          │              │          │              │
+│ SPI TX ──────┼──~65us──>│              │          │              │
+│ (43B frame)  │          │ PLCA+Wire ───┼──~35us──>│              │
+│              │          │              │          │ SPI RX ~65us │
+│              │          │              │          │ lwIP process │
+│              │          │              │          │ IP+UDP parse │
+│              │          │              │          │ Update LED   │
+│              │          │              │          │ Alloc pbuf   │
+│              │          │              │          │ Build IP+UDP │
+│              │          │              │          │ SPI TX ──────┼──~65us──┐
+│              │          │              │<─~35us───┼─ PLCA+Wire   │         │
+│ SPI RX <─────┼──~65us──┤              │          │              │         │
+│ Record t1    │          │              │          │              │         │
+│ RTT = ~478us │          │              │          │              │         │
+└──────────────┘          └──────────────┘          └──────────────┘
+```
+
+### Raw Ethernet Heartbeat (~422 us RTT)
+
+```
+     SERVER                    T1S Wire                    CLIENT
+┌──────────────┐          ┌──────────────┐          ┌──────────────┐
+│ Toggle LED   │          │              │          │              │
+│ Record t0    │          │              │          │              │
+│              │          │              │          │              │
+│ TC6 raw TX ──┼──~65us──>│              │          │              │
+│ (15B frame)  │          │ PLCA+Wire ───┼──~35us──>│              │
+│              │          │              │          │ SPI RX ~65us │
+│              │          │              │          │ RX callback  │
+│ NO lwIP ──── │          │              │          │ (no lwIP!)   │
+│              │          │              │          │ Update LED   │
+│              │          │              │          │ TC6 raw TX ──┼──~65us──┐
+│              │          │              │<─~35us───┼─ PLCA+Wire   │         │
+│ SPI RX <─────┼──~65us──┤              │          │              │         │
+│ RX callback  │          │              │          │              │         │
+│ RTT = ~422us │          │              │          │              │         │
+└──────────────┘          └──────────────┘          └──────────────┘
+
+    Savings vs UDP: ~56 us (no IP/UDP header build, no pbuf alloc,
+                            no checksum, no stack demux)
 ```
 
 ---
 
 ## Packet Size Analysis
 
-### Heartbeat Packet (Server → Client)
+### UDP Heartbeat Packet (Server → Client)
 
 | Layer | Field | Bytes |
 |-------|-------|-------|
 | Ethernet | Preamble + SFD | 8 |
 | Ethernet | Destination MAC | 6 |
 | Ethernet | Source MAC | 6 |
-| Ethernet | EtherType | 2 |
+| Ethernet | EtherType (0x0800) | 2 |
 | IP | Header | 20 |
 | UDP | Header | 8 |
 | **Application** | **LED state (payload)** | **1** |
+| Ethernet | Padding (to 46B min payload) | 17 |
 | Ethernet | FCS | 4 |
-| **Total on wire** | | **55 bytes** |
+| **Total on wire** | | **72 bytes** |
 
-### ACK Packet (Client → Server)
+### Raw Ethernet Heartbeat Packet (Server → Client)
 
 | Layer | Field | Bytes |
 |-------|-------|-------|
 | Ethernet | Preamble + SFD | 8 |
-| Ethernet | Destination MAC | 6 |
+| Ethernet | Destination MAC (broadcast) | 6 |
 | Ethernet | Source MAC | 6 |
-| Ethernet | EtherType | 2 |
-| IP | Header | 20 |
-| UDP | Header | 8 |
-| **Application** | **ACK byte (0xAC)** | **1** |
+| Ethernet | EtherType (0x88B5) | 2 |
+| **Application** | **LED state (payload)** | **1** |
+| Ethernet | Padding (to 46B min payload) | 45 |
 | Ethernet | FCS | 4 |
-| **Total on wire** | | **55 bytes** |
+| **Total on wire** | | **72 bytes** |
+
+### Comparison: MCU-Constructed Bytes
+
+| Mode | MCU Builds | Sent over SPI | On Wire |
+|------|-----------|---------------|---------|
+| **UDP** | 14 (Eth) + 20 (IP) + 8 (UDP) + 1 = **43 bytes** | 43 bytes | 72 bytes |
+| **Raw ETH** | 14 (Eth) + 1 = **15 bytes** | 15 bytes | 72 bytes |
+| **Difference** | **28 fewer bytes** (no IP/UDP) | 28 fewer | Same (MAC pads) |
+
+Both modes transmit the same 72 bytes on the wire due to Ethernet minimum frame padding. The RTT improvement comes from:
+- 28 fewer bytes over SPI (~15 us at 20 MHz)
+- No lwIP processing: pbuf alloc/free, IP routing, UDP checksum, stack demux (~41 us)
 
 ### iperf Packet (Throughput Test)
 
@@ -189,23 +252,21 @@ SERVER                              CLIENT
 | Ethernet | FCS | 4 |
 | **Total on wire** | | **1514 bytes** |
 
-### Summary
-
-| Packet Type | Payload | Total on Wire | Direction |
-|-------------|---------|---------------|-----------|
-| Heartbeat | 1 byte | 55 bytes | Server → Client |
-| ACK | 1 byte | 55 bytes | Client → Server |
-| iperf | 1460 bytes | 1514 bytes | Server → Client |
-
 ---
 
 ## Performance Results
 
+| Metric | UDP Mode | Raw ETH Mode |
+|--------|----------|--------------|
+| Heartbeat RTT | ~478 us | ~422 us |
+| RTT Jitter | ±5 us | ±5 us |
+| Improvement vs UDP | -- | **~56 us (12%)** |
+
 | Metric | Value |
 |--------|-------|
-| Heartbeat RTT | ~507-513 us |
-| RTT Jitter | ±3 us |
+| SPI Clock | 20 MHz |
 | Heartbeat Rate | 2 Hz (500ms period) |
+| Exchanges per mode | 10 |
 | iperf Throughput | ~9.5 Mbps (95% link utilization) |
 | PLCA Nodes | 2 |
 | Timer Resolution | 10 ns |
@@ -224,9 +285,10 @@ SERVER                              CLIENT
 | Action | Server | Client |
 |--------|--------|--------|
 | LED behavior | Blinks at 500ms | Mirrors server LED |
+| Heartbeat mode | Alternates UDP/ETH every 10 exchanges | Reactive (responds in same protocol) |
 | Short press SW0 | Start/stop iperf | No action |
 | Long press SW0 (3s) | LED solid ON → release → reset in 1s | Same |
-| UART output | RTT stats every 1s | Throughput stats when receiving iperf |
+| UART output | Per-exchange RTT with mode label | Throughput stats when receiving iperf |
 
 ### Reset & Role Change
 
@@ -237,15 +299,36 @@ SERVER                              CLIENT
 
 ### UART Output Examples
 
-**Server (heartbeat):**
+**Server (dual-mode heartbeat):**
 ```
 === dsPIC33AK512MPS506 Curiosity + T1S ===
 Role: SERVER (nodeId=1, IP=192.168.0.101)
   LED blinks at 500ms, heartbeat sent to client
   Short press: toggle iperf | Long press (3s): reset
 Heartbeat: initialized as SERVER (peer=192.168.0.100)
-HB: tx=10 rx=10 RTT=507 us (avg=507 us)
-HB: tx=12 rx=12 RTT=512 us (avg=510 us)
+ETH: initialized as SERVER (raw EtherType=0x88B5)
+>> Switching to RAW ETH heartbeat
+ETH: tx=1 rx=1 RTT=422 us (avg=422 us)
+ETH: tx=2 rx=2 RTT=417 us (avg=419 us)
+ETH: tx=3 rx=3 RTT=431 us (avg=423 us)
+ETH: tx=4 rx=4 RTT=422 us (avg=423 us)
+ETH: tx=5 rx=5 RTT=427 us (avg=424 us)
+ETH: tx=6 rx=6 RTT=422 us (avg=423 us)
+ETH: tx=7 rx=7 RTT=423 us (avg=423 us)
+ETH: tx=8 rx=8 RTT=417 us (avg=422 us)
+ETH: tx=9 rx=9 RTT=427 us (avg=423 us)
+>> Switching to UDP heartbeat
+UDP: tx=10 rx=10 RTT=481 us (avg=481 us)
+UDP: tx=11 rx=11 RTT=482 us (avg=481 us)
+UDP: tx=12 rx=12 RTT=478 us (avg=480 us)
+UDP: tx=13 rx=13 RTT=477 us (avg=479 us)
+UDP: tx=14 rx=14 RTT=478 us (avg=479 us)
+UDP: tx=15 rx=15 RTT=477 us (avg=479 us)
+UDP: tx=16 rx=16 RTT=480 us (avg=479 us)
+UDP: tx=17 rx=17 RTT=477 us (avg=479 us)
+UDP: tx=18 rx=18 RTT=482 us (avg=479 us)
+>> Switching to RAW ETH heartbeat
+...
 ```
 
 **Client (receiving iperf):**
@@ -255,6 +338,7 @@ Role: CLIENT (nodeId=0, IP=192.168.0.100)
   LED mirrors server heartbeat
   Short press: toggle iperf | Long press (3s): reset
 Heartbeat: initialized as CLIENT (peer=192.168.0.101)
+ETH: initialized as CLIENT (raw EtherType=0x88B5)
 IPERF RX bandwidth=9470 kbit/s packets=810 1/s
 ```
 
@@ -283,17 +367,19 @@ IPERF RX bandwidth=9470 kbit/s packets=810 1/s
 
 | Path | Purpose |
 |------|---------|
-| `src/main.c` | Main application, role selection, heartbeat/iperf orchestration |
+| `src/main.c` | Main application, role selection, heartbeat mode switching |
 | `src/app.c/.h` | Button debounce, long-press detection, boot role check |
-| `src/T1S/udp_heartbeat.c/.h` | UDP heartbeat protocol (1-byte LED sync + RTT) |
+| `src/T1S/udp_heartbeat.c/.h` | UDP heartbeat protocol (lwIP UDP/IP, 1-byte LED sync + RTT) |
+| `src/T1S/eth_heartbeat.c/.h` | Raw Ethernet heartbeat (EtherType 0x88B5, bypasses lwIP) |
 | `src/T1S/udp_perf_client.c/.h` | iperf UDP throughput test (sender + receiver) |
 | `src/T1S/t1s_lwip.c/.h` | T1S/PLCA/lwIP initialization with configurable nodeId/IP |
-| `src/T1S/tcp_server.c` | TCP server |
+| `src/T1S/tc6-lwip.c/.h` | TC6-lwIP bridge, raw RX callback registration |
 | `src/systick/systick.c/.h` | Free-running 32-bit timer (10ns resolution, no ISR) |
 | `src/hal/` | Hardware abstraction (SPI DMA, systick HAL, T1S HAL) |
 
 | `cmake/` | CMake build system (auto-generated by MPLAB) |
-| `libs/` | Pre-compiled libraries (lwIP, TC6, X2Cscope) |
+| `libs/` | Pre-compiled libraries (lwIP, TC6) |
+| `assets/` | Documentation diagrams (drawio) and images |
 
 ---
 

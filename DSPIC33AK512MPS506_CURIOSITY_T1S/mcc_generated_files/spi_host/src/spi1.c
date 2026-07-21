@@ -77,9 +77,9 @@ struct SPI1_HOST_CONFIG
 static const struct SPI1_HOST_CONFIG config[] = {  
                                         { 
                                             /*Configuration setting for HOST_CONFIG.
-                                            SPI Mode : Mode 0, Sampled at : End, Data Width : 8 Clock Frequency : 16666.667 kHz*/
-                                            0x2,//SPI1BRG
-                                            0x321,//SPI1CON1
+                                            SPI Mode : Mode 0, Sampled at : End, Data Width : 8 Clock Frequency : 20000 kHz*/
+                                            0x7,//SPI1BRG
+                                            0x325,//SPI1CON1
                                         },
                                     };
 
@@ -93,12 +93,12 @@ void SPI1_Initialize (void)
     SPI1STAT = 0x28;
     // SPIBUF 0x0; 
     SPI1BUF = 0x0;
-    // SPIBRG 2; 
-    SPI1BRG = 0x2;
+    // SPIBRG 7; 
+    SPI1BRG = 0x7;
     // SPIURDT 0x0; 
     SPI1URDT = 0x0;
-    // ENHBUF enabled; SPIFE Frame Sync pulse precedes; MCLKEN Standard Speed Peripheral Clock; DISSCK disabled; DISSDI disabled; MSTEN Host; CKP Idle:Low, Active:High; SSEN disabled; CKE Active to Idle; SMP End; MODE16 disabled; MODE32 disabled; DISSDO disabled; SIDL disabled; ON disabled; FRMCNT 0x0; FRMSYPW One clock wide; MSSEN disabled; FRMPOL disabled; FRMSYNC disabled; FRMEN disabled; AUDMOD I2S; URDTEN disabled; AUDMONO stereo; IGNTUR disabled; IGNROV disabled; SPISGNEXT not sign-extended; AUDEN disabled; 
-    SPI1CON1 = 0x321;
+    // ENHBUF enabled; SPIFE Frame Sync pulse precedes; MCLKEN Clock Generator 9; DISSCK disabled; DISSDI disabled; MSTEN Host; CKP Idle:Low, Active:High; SSEN disabled; CKE Active to Idle; SMP End; MODE16 disabled; MODE32 disabled; DISSDO disabled; SIDL disabled; ON disabled; FRMCNT 0x0; FRMSYPW One clock wide; MSSEN disabled; FRMPOL disabled; FRMSYNC disabled; FRMEN disabled; AUDMOD I2S; URDTEN disabled; AUDMONO stereo; IGNTUR disabled; IGNROV disabled; SPISGNEXT not sign-extended; AUDEN disabled; 
+    SPI1CON1 = 0x325;
 }
 
 void SPI1_Deinitialize (void)

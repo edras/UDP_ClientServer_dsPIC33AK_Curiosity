@@ -89,6 +89,12 @@ const heartbeat_stats_t* heartbeat_get_stats(void);
  */
 board_role_t heartbeat_get_role(void);
 
+/**
+ * @brief Reset RTT reporting accumulators.
+ *        Call when switching modes to avoid stale transitional RTT reports.
+ */
+void heartbeat_reset_rtt(void);
+
 #ifdef __cplusplus
 }
 #endif
